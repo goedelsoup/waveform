@@ -274,6 +274,33 @@ The framework provides detailed error reporting:
 - **Validation Errors**: Detailed diff information for failed contracts
 - **Configuration Errors**: Collector configuration issues
 
+## Installation
+
+### Binary Downloads
+
+Download the latest release for your platform from the [GitHub releases page](https://github.com/goedelsoup/waveform/releases).
+
+### Homebrew (macOS)
+
+```bash
+brew install goedelsoup/tap/waveform
+```
+
+### Docker
+
+```bash
+docker pull goedelsoup/waveform:latest
+docker run --rm goedelsoup/waveform --help
+```
+
+### From Source
+
+```bash
+git clone https://github.com/goedelsoup/waveform.git
+cd waveform
+go install ./cmd/waveform
+```
+
 ## Support
 
 For questions and support:
@@ -289,3 +316,7 @@ This project is licensed under the Apache License, Version 2.0 - see the [LICENS
 ## Development
 
 For development information, see [.github/DEVELOPMENT.md](.github/DEVELOPMENT.md).
+
+## Releasing
+
+For information about the release process, see [RELEASING.md](RELEASING.md).

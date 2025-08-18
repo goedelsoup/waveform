@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    binary: waveform
+    main: ./cmd/waveform
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - examples/
+      - actions/
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+dockers:
+  - image_templates:
+      - "goedelsoup/waveform:{{ .Version }}"
+      - "goedelsoup/waveform:v{{ .Major }}.{{ .Minor }}"
+      - "goedelsoup/waveform:latest"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--platform=linux/arm64"
+    extra_files:
+      - README.md
+      - LICENSE
+      - examples/
+
+brews:
+  - name: waveform
+    homepage: "https://github.com/goedelsoup/waveform"
+    description: "OpenTelemetry Contract Testing Framework"
+    repository:
+      owner: goedelsoup
+      name: homebrew-tap
+    commit_author:
+      name: Cory Parent
+      email: goedelsoup+waveform@goedelsoup.io
+    test: |
+      system "#{bin}/waveform", "--help"
+    install: |
+      bin.install "waveform"
+
+release:
+  draft: false
+  prerelease: false
+  name_template: '{{ .ProjectName }} {{ .Version }}'
+  footer: |
+    ## Installation
+
+    ### Binary
+    Download the appropriate binary for your platform from the assets above.
+
+    ### Homebrew
+    ```bash
+    brew install goedelsoup/tap/waveform
+    ```
+
+    ### Docker
+    ```bash
+    docker pull goedelsoup/waveform:{{ .Version }}
+    ```
+
+  extra_files:
+    - glob: ./examples/**/*
+    - glob: ./actions/**/*
+    - glob: ./testdata/**/*

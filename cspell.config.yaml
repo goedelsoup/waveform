@@ -3,6 +3,8 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - buildx
+  - goreleaser
   - pcommon
   - pdata
   - plog
