@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - uses: actions/checkout@v4
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
         with:
@@ -30,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - uses: actions/checkout@v4
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
       
@@ -55,6 +57,7 @@ jobs:
     needs: [build, test]
     
     steps:
+      - uses: actions/checkout@v4
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
         with:
