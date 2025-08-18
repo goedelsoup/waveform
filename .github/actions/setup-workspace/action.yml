@@ -1,0 +1,112 @@
+name: 'Setup Workspace'
+description: 'Set up the development environment for the waveform project'
+
+inputs:
+  go-version:
+    description: 'Go version to use'
+    required: false
+    default: '1.23.3'
+  cache-go-modules:
+    description: 'Whether to cache Go modules'
+    required: false
+    default: 'true'
+  install-just:
+    description: 'Whether to install just command runner'
+    required: false
+    default: 'true'
+  install-tools:
+    description: 'Whether to install development tools (golangci-lint, godoc)'
+    required: false
+    default: 'true'
+  setup-git:
+    description: 'Whether to configure git for the workflow'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: ${{ inputs.cache-go-modules }}
+
+    - name: Install just
+      if: inputs.install-just == 'true'
+      shell: bash
+      run: |
+        # Install just command runner
+        if ! command -v just &> /dev/null; then
+          echo "Installing just..."
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to ~/.local/bin
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        else
+          echo "just already installed"
+        fi
+
+    - name: Install development tools
+      if: inputs.install-tools == 'true'
+      shell: bash
+      run: |
+        # Install golangci-lint
+        if ! command -v golangci-lint &> /dev/null; then
+          echo "Installing golangci-lint..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        else
+          echo "golangci-lint already installed"
+        fi
+        
+        # Install godoc
+        if ! command -v godoc &> /dev/null; then
+          echo "Installing godoc..."
+          go install golang.org/x/tools/cmd/godoc@latest
+        else
+          echo "godoc already installed"
+        fi
+
+    - name: Setup Git configuration
+      if: inputs.setup-git == 'true'
+      shell: bash
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Verify Go installation
+      shell: bash
+      run: |
+        echo "Go version:"
+        go version
+        echo "Go environment:"
+        go env GOROOT GOPATH GOCACHE
+        echo "Go modules enabled:"
+        go env GOMOD
+
+    - name: Download Go modules
+      shell: bash
+      run: |
+        echo "Downloading Go modules..."
+        go mod download
+        go mod verify
+
+    - name: Verify project structure
+      shell: bash
+      run: |
+        echo "Verifying project structure..."
+        just validate
+
+    - name: Show workspace info
+      shell: bash
+      run: |
+        echo "Workspace setup complete!"
+        echo "========================"
+        echo "Go version: $(go version)"
+        echo "Go modules: $(go env GOMOD)"
+        echo "Working directory: $(pwd)"
+        echo "Available just commands:"
+        just --list

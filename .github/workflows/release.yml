@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          install-tools: 'false'  # Skip tools for faster builds
+      
+      - name: Build for all platforms
+        run: just build-all
+      
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: build/
+          retention-days: 30
+
+  test:
+    name: Test Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+      
+      - name: Run full test suite
+        run: just test
+      
+      - name: Run example contracts
+        run: just example-reports
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test-results.xml
+            coverage.info
+            summary.txt
+          retention-days: 30
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          setup-git: 'true'
+      
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: build/
+      
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: ./
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/*-linux-amd64
+            build/*-darwin-amd64
+            build/*-windows-amd64.exe
+            test-results.xml
+            coverage.info
+            summary.txt
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

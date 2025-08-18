@@ -1,0 +1,8 @@
+---
+name: waveform
+scope_type: library
+description: Contract testing framework for OpenTelemetry pipelines
+version: 1.0.0
+schema_version: 1.0.0
+dependencies: null
+protocol_info: null

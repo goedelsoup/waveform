@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Example HTTP Trace Contract
+# This contract defines expectations for HTTP trace data from an auth service
+
+publisher: "auth-service"
+pipeline: "traces"
+version: "1.0.0"
+
+inputs:
+  traces:
+    - span_name: "HTTP GET /auth/validate"
+      service_name: "auth-service"
+      attributes:
+        http.method: "GET"
+        http.route: "/auth/validate"
+        http.status_code: 200
+
+filters:
+  - field: "span.service.name"
+    operator: "equals"
+    value: "auth-service"
+
+matchers:
+  traces:
+    - span_name: "HTTP GET /auth/validate"
+      attributes:
+        http.method: "GET"
+        http.route: "/auth/validate"
+        http.status_code: 200

@@ -1,0 +1,148 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Example OpenTelemetry Collector Configuration
+# This file demonstrates the configuration format expected by the waveform testing framework
+
+receivers:
+  # OTLP receiver for gRPC
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+        cors:
+          allowed_origins:
+            - "http://test.com"
+            - "https://test.com"
+        tls:
+          cert_file: "server.crt"
+          key_file: "server.key"
+
+  # OTLP receiver for HTTP
+  otlp/http:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "http://test.com"
+            - "https://test.com"
+
+  # Jaeger receiver
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:14250"
+      thrift_http:
+        endpoint: "0.0.0.0:14268"
+
+  # Zipkin receiver
+  zipkin:
+    endpoint: "0.0.0.0:9411"
+
+processors:
+  # Batch processor
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Memory limiter
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1500
+
+  # Resource processor
+  resource:
+    attributes:
+      - key: environment
+        value: "production"
+        action: upsert
+      - key: service.version
+        from_attribute: "version"
+        action: upsert
+
+  # Attributes processor
+  attributes:
+    actions:
+      - key: db.statement
+        action: delete
+      - key: credit_card
+        action: delete
+      - key: environment
+        value: "production"
+        action: upsert
+
+  # Filter processor
+  filter:
+    spans:
+      include:
+        match_type: regexp
+        services: ["auth.*", "login.*"]
+        attributes:
+          - key: http.status_code
+            value: 5.*
+
+exporters:
+  # Logging exporter for debugging
+  logging:
+    loglevel: debug
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+  # OTLP exporter
+  otlp:
+    endpoint: "http://localhost:4318"
+    tls:
+      insecure: true
+    headers:
+      "api-key": "test-key"
+
+  # Jaeger exporter
+  jaeger:
+    endpoint: "http://localhost:14268/api/traces"
+    tls:
+      insecure: true
+
+  # Zipkin exporter
+  zipkin:
+    endpoint: "http://localhost:9411/api/v2/spans"
+    format: json
+
+  # Prometheus exporter
+  prometheus:
+    endpoint: "0.0.0.0:9464"
+    namespace: "test"
+    const_labels:
+      label1: value1
+      "another label": spaced value
+
+service:
+  # Telemetry configuration
+  telemetry:
+    logs:
+      level: debug
+    metrics:
+      level: detailed
+    traces:
+      processors: [batch]
+
+  # Pipeline configurations
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp, jaeger, zipkin]
+      processors: [memory_limiter, batch, resource, attributes, filter]
+      exporters: [logging, otlp, jaeger, zipkin]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [logging, otlp, prometheus]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, attributes]
+      exporters: [logging, otlp]

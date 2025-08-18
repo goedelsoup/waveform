@@ -1,0 +1,9 @@
+# Knowledge Base
+# This file contains insights, learnings, and domain knowledge for this scope
+
+entries: []
+categories:
+  architecture: "System architecture and design decisions"
+  patterns: "Design patterns and best practices"
+  gotchas: "Common pitfalls and how to avoid them"
+  performance: "Performance considerations and optimizations"

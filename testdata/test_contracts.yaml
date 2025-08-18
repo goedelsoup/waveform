@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+publisher: "test-service"
+pipeline: "basic-trace"
+version: "1.0"
+description: "Basic trace transformation test"
+
+inputs:
+  traces:
+    - span_name: "test_operation"
+      service_name: "test-service"
+      attributes:
+        test.key: "test_value"
+        http.method: "GET"
+
+filters:
+  - field: "span.service.name"
+    operator: "equals"
+    value: "test-service"
+
+matchers:
+  traces:
+    - span_name: "test_operation"
+      attributes:
+        test.key: "test_value"
+        http.method: "GET"

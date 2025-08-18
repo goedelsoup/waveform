@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+      
+      - name: Run tests
+        run: just test
+      
+      - name: Run tests with coverage
+        run: just test-coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          install-tools: 'true'
+      
+      - name: Run linting
+        run: just lint
+      
+      - name: Check formatting
+        run: just fmt
+      
+      - name: Run vet
+        run: just vet
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+        with:
+          install-tools: 'false'  # Skip tools for faster builds
+      
+      - name: Build binary
+        run: just build
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: build/
+          retention-days: 7
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+      
+      - name: Validate project structure
+        run: just validate
+      
+      - name: Check for common issues
+        run: just check
+      
+      - name: Run example contracts
+        run: just example
