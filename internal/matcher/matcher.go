@@ -431,8 +431,24 @@ func (m *Matcher) validateTrace(matcher contract.TraceMatcher, traces ptrace.Tra
 		} else {
 			// Field should exist and match
 			if actualValue, ok := span.Attributes().Get(key); ok {
-				if actualValue.Str() != expectedValue {
-					return fmt.Errorf("attribute %s mismatch: expected %v, got %s", key, expectedValue, actualValue.Str())
+				// Handle different value types
+				var actualStr string
+				switch actualValue.Type() {
+				case pcommon.ValueTypeStr:
+					actualStr = actualValue.Str()
+				case pcommon.ValueTypeInt:
+					actualStr = fmt.Sprintf("%d", actualValue.Int())
+				case pcommon.ValueTypeDouble:
+					actualStr = fmt.Sprintf("%f", actualValue.Double())
+				case pcommon.ValueTypeBool:
+					actualStr = fmt.Sprintf("%t", actualValue.Bool())
+				default:
+					actualStr = actualValue.AsString()
+				}
+
+				expectedStr := fmt.Sprintf("%v", expectedValue)
+				if actualStr != expectedStr {
+					return fmt.Errorf("attribute %s mismatch: expected %v, got %s", key, expectedValue, actualStr)
 				}
 			} else {
 				return fmt.Errorf("attribute %s not found", key)
