@@ -301,13 +301,25 @@ func (g *Generator) generateRealisticLogs(count int) plog.Logs {
 
 func (g *Generator) generateTraceID() pcommon.TraceID {
 	var traceID [16]byte
-	rand.Read(traceID[:])
+	if _, err := rand.Read(traceID[:]); err != nil {
+		// In a real implementation, you might want to handle this error more gracefully
+		// For now, we'll use a fallback approach
+		for i := range traceID {
+			traceID[i] = byte(i)
+		}
+	}
 	return pcommon.TraceID(traceID)
 }
 
 func (g *Generator) generateSpanID() pcommon.SpanID {
 	var spanID [8]byte
-	rand.Read(spanID[:])
+	if _, err := rand.Read(spanID[:]); err != nil {
+		// In a real implementation, you might want to handle this error more gracefully
+		// For now, we'll use a fallback approach
+		for i := range spanID {
+			spanID[i] = byte(i)
+		}
+	}
 	return pcommon.SpanID(spanID)
 }
 

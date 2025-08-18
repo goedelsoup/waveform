@@ -4,6 +4,7 @@
 package testing
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/goedelsoup/waveform/internal/contract"
@@ -75,7 +76,12 @@ func RunContractTests(contracts []*contract.Contract, mode harness.TestMode, con
 	if err != nil {
 		return harness.TestResults{}, err
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			// Log the error but don't fail the test
+			fmt.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
 
 	// Create framework
 	framework := NewFramework(mode, config)

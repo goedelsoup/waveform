@@ -1,0 +1,35 @@
+name: 'Example: Register OpenTelemetry Contracts'
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  register-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Contracts (PR)
+        if: github.event_name == 'pull_request'
+        uses: goedelsoup/waveform/actions/register-contracts@v1
+        with:
+          contracts: './contracts/**/*.yaml'
+          validate-only: 'true'
+          verbose: 'true'
+
+      - name: Register Contracts (Main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: goedelsoup/waveform/actions/register-contracts@v1
+        with:
+          contracts: './contracts/**/*.yaml'
+          output-dir: './published-contracts'
+          verbose: 'true'
+
+      - name: Check Registration Results
+        if: failure()
+        run: |
+          echo "Contract registration failed. Check the validation output above."

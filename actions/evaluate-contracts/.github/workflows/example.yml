@@ -1,0 +1,31 @@
+name: 'Example: Evaluate OpenTelemetry Contracts'
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  evaluate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Evaluate Contracts
+        uses: goedelsoup/waveform/actions/evaluate-contracts@v1
+        with:
+          contracts: './contracts/**/*.yaml'
+          config: './collector-config.yaml'
+          mode: 'pipeline'
+          junit-output: 'test-results.xml'
+          lcov-output: 'coverage.info'
+          summary-output: 'summary.txt'
+          verbose: 'true'
+
+      - name: Check Test Results
+        if: failure()
+        run: |
+          echo "Contract evaluation failed. Check the uploaded artifacts for details."
+          echo "Review the test results in the 'contract-test-results' artifact."

@@ -1,0 +1,82 @@
+name: 'Register OpenTelemetry Contracts'
+description: 'Register OpenTelemetry contracts for pipeline validation'
+
+inputs:
+  contracts:
+    description: 'Path to contract files (glob patterns supported)'
+    required: true
+    default: './contracts/**/*.yaml'
+  output-dir:
+    description: 'Directory to store registered contracts'
+    required: false
+    default: './registered-contracts'
+  validate-only:
+    description: 'Only validate contracts without registering'
+    required: false
+    default: 'false'
+  verbose:
+    description: 'Enable verbose logging'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Setup Go'
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: 'Install Waveform'
+      shell: bash
+      run: |
+        go install github.com/goedelsoup/waveform/cmd/waveform@latest
+
+    - name: 'Validate Contracts'
+      shell: bash
+      run: |
+        echo "Validating contracts..."
+        waveform \
+          --contracts "${{ inputs.contracts }}" \
+          --mode processor \
+          ${{ inputs.verbose == 'true' && '--verbose' || '' }}
+        echo "Contract validation completed successfully"
+
+    - name: 'Create Output Directory'
+      if: inputs.validate-only != 'true'
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.output-dir }}"
+
+    - name: 'Copy Contracts to Output Directory'
+      if: inputs.validate-only != 'true'
+      shell: bash
+      run: |
+        echo "Registering contracts to ${{ inputs.output-dir }}..."
+        find . -path "${{ inputs.contracts }}" -type f -exec cp {} "${{ inputs.output-dir }}/" \;
+        echo "Contracts registered successfully"
+
+    - name: 'Upload Registered Contracts'
+      if: inputs.validate_only != 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: 'registered-contracts'
+        path: ${{ inputs.output-dir }}
+        retention-days: 90
+
+    - name: 'Create Contract Manifest'
+      if: inputs.validate_only != 'true'
+      shell: bash
+      run: |
+        echo "Creating contract manifest..."
+        cat > "${{ inputs.output-dir }}/manifest.json" << EOF
+        {
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "repository": "${{ github.repository }}",
+          "commit": "${{ github.sha }}",
+          "contracts": [
+            $(find "${{ inputs.output-dir }}" -name "*.yaml" -type f | sed 's/.*\//"/' | sed 's/$/"/' | paste -sd ',' -)
+          ]
+        }
+        EOF
+        echo "Contract manifest created"

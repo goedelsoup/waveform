@@ -162,9 +162,7 @@ func (h *TestHarness) runSingleTest(contractDef *contract.Contract) TestResult {
 		result.Errors = append(result.Errors, validationError.Message)
 	}
 
-	for _, warning := range validationResult.Warnings {
-		result.Warnings = append(result.Warnings, warning)
-	}
+	result.Warnings = append(result.Warnings, validationResult.Warnings...)
 
 	result.Duration = time.Since(startTime)
 

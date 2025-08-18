@@ -1,0 +1,73 @@
+name: 'Evaluate OpenTelemetry Contracts'
+description: 'Validate OpenTelemetry contracts against collector pipeline configurations'
+
+inputs:
+  contracts:
+    description: 'Path to contract files (glob patterns supported)'
+    required: true
+    default: './contracts/**/*.yaml'
+  config:
+    description: 'Path to collector configuration file'
+    required: false
+  mode:
+    description: 'Test mode: pipeline or processor'
+    required: false
+    default: 'pipeline'
+  junit-output:
+    description: 'Path for JUnit XML output file'
+    required: false
+    default: 'test-results.xml'
+  lcov-output:
+    description: 'Path for LCOV output file'
+    required: false
+    default: 'coverage.info'
+  summary-output:
+    description: 'Path for summary output file'
+    required: false
+    default: 'summary.txt'
+  verbose:
+    description: 'Enable verbose logging'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Setup Go'
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: 'Install Waveform'
+      shell: bash
+      run: |
+        go install github.com/goedelsoup/waveform/cmd/waveform@latest
+
+    - name: 'Run Contract Tests'
+      shell: bash
+      run: |
+        waveform \
+          --contracts "${{ inputs.contracts }}" \
+          --mode "${{ inputs.mode }}" \
+          ${{ inputs.config && format('--config {0}', inputs.config) || '' }} \
+          --junit-output "${{ inputs.junit-output }}" \
+          --lcov-output "${{ inputs.lcov-output }}" \
+          --summary-output "${{ inputs.summary-output }}" \
+          ${{ inputs.verbose == 'true' && '--verbose' || '' }}
+
+    - name: 'Upload Test Results'
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: 'contract-test-results'
+        path: |
+          ${{ inputs.junit-output }}
+          ${{ inputs.lcov-output }}
+          ${{ inputs.summary-output }}
+        retention-days: 30
+
+    - name: 'Publish Test Results'
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: ${{ inputs.junit-output }}

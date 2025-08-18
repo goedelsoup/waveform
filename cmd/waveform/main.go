@@ -46,7 +46,10 @@ pipelines transform data correctly.`,
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 
 	// Mark required flags
-	rootCmd.MarkFlagRequired("contracts")
+	if err := rootCmd.MarkFlagRequired("contracts"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -66,7 +69,11 @@ func runTests(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error syncing logger: %v\n", err)
+		}
+	}()
 
 	logger.Info("Starting OpenTelemetry Contract Testing Framework")
 

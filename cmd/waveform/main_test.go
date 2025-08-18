@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -549,7 +550,9 @@ pipelines transform data correctly.`,
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 
 	// Mark required flags
-	rootCmd.MarkFlagRequired("contracts")
+	if err := rootCmd.MarkFlagRequired("contracts"); err != nil {
+		return fmt.Errorf("failed to mark contracts flag as required: %w", err)
+	}
 
 	// Parse the command line arguments
 	rootCmd.SetArgs(os.Args[1:])
