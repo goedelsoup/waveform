@@ -1,0 +1,260 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Waveform Runner Configuration Example (TOML)
+# This file demonstrates the TOML configuration format for the Waveform runner
+
+[runner]
+# Logging configuration
+log_level = "info"                    # debug, info, warn, error
+log_format = "json"                   # json, console
+
+# Test execution settings
+timeout = "30s"                       # Default timeout for test execution
+parallel = 1                          # Number of parallel test executions
+
+[runner.output]
+formats = ["summary", "junit", "lcov"]  # Report formats to generate
+directory = "./waveform-reports"        # Output directory for reports
+overwrite = false                       # Whether to overwrite existing files
+verbose = false                         # Verbose output
+
+[runner.cache]
+enabled = true                    # Whether to enable caching
+directory = "~/.cache/waveform"   # Cache directory
+ttl = "1h"                       # Cache TTL
+max_size = 100                   # Maximum cache size in MB
+
+# Collector definitions for matching system
+[collectors.production]
+name = "production-collector"
+description = "Production environment collector with full telemetry pipeline"
+config_path = "/etc/collector/production.yaml"
+tags = ["production", "main", "telemetry"]
+
+# Environment-specific settings
+[collectors.production.environment]
+datacenter = "us-west-1"
+tier = "production"
+retention_days = 30
+
+# Pipeline configurations
+[collectors.production.pipelines.traces]
+name = "traces-pipeline"
+description = "Trace processing pipeline for production"
+signals = ["traces"]
+
+[[collectors.production.pipelines.traces.selectors]]
+field = "type"
+operator = "equals"
+value = "trace"
+priority = 1
+
+[[collectors.production.pipelines.traces.selectors]]
+field = "environment"
+operator = "equals"
+value = "production"
+priority = 2
+
+[[collectors.production.pipelines.traces.selectors]]
+field = "service.name"
+operator = "matches"
+value = ".*"
+priority = 0
+
+[collectors.production.pipelines.traces.environment]
+sampling_rate = 0.1
+batch_size = 1000
+
+[collectors.production.pipelines.metrics]
+name = "metrics-pipeline"
+description = "Metrics processing pipeline for production"
+signals = ["metrics"]
+
+[[collectors.production.pipelines.metrics.selectors]]
+field = "type"
+operator = "equals"
+value = "metric"
+priority = 1
+
+[[collectors.production.pipelines.metrics.selectors]]
+field = "environment"
+operator = "equals"
+value = "production"
+priority = 2
+
+[collectors.production.pipelines.metrics.environment]
+aggregation_interval = "1m"
+retention_days = 90
+
+[collectors.production.pipelines.logs]
+name = "logs-pipeline"
+description = "Log processing pipeline for production"
+signals = ["logs"]
+
+[[collectors.production.pipelines.logs.selectors]]
+field = "type"
+operator = "equals"
+value = "log"
+priority = 1
+
+[[collectors.production.pipelines.logs.selectors]]
+field = "environment"
+operator = "equals"
+value = "production"
+priority = 2
+
+[collectors.production.pipelines.logs.environment]
+log_level = "info"
+retention_days = 7
+
+# Staging environment collector
+[collectors.staging]
+name = "staging-collector"
+description = "Staging environment collector for testing"
+config_path = "/etc/collector/staging.yaml"
+tags = ["staging", "test", "development"]
+
+[collectors.staging.environment]
+datacenter = "us-west-1"
+tier = "staging"
+retention_days = 7
+
+[collectors.staging.pipelines.traces]
+name = "staging-traces"
+description = "Trace processing pipeline for staging"
+signals = ["traces"]
+
+[[collectors.staging.pipelines.traces.selectors]]
+field = "type"
+operator = "equals"
+value = "trace"
+priority = 1
+
+[[collectors.staging.pipelines.traces.selectors]]
+field = "environment"
+operator = "equals"
+value = "staging"
+priority = 2
+
+[collectors.staging.pipelines.traces.environment]
+sampling_rate = 1.0  # Full sampling in staging
+batch_size = 100
+
+[collectors.staging.pipelines.metrics]
+name = "staging-metrics"
+description = "Metrics processing pipeline for staging"
+signals = ["metrics"]
+
+[[collectors.staging.pipelines.metrics.selectors]]
+field = "type"
+operator = "equals"
+value = "metric"
+priority = 1
+
+[[collectors.staging.pipelines.metrics.selectors]]
+field = "environment"
+operator = "equals"
+value = "staging"
+priority = 2
+
+[collectors.staging.pipelines.metrics.environment]
+aggregation_interval = "30s"
+retention_days = 7
+
+# Development environment collector
+[collectors.development]
+name = "development-collector"
+description = "Development environment collector for local testing"
+config_path = "./collector-config.yaml"
+tags = ["development", "local", "debug"]
+
+[collectors.development.environment]
+datacenter = "local"
+tier = "development"
+retention_days = 1
+
+[collectors.development.pipelines.traces]
+name = "dev-traces"
+description = "Trace processing pipeline for development"
+signals = ["traces"]
+
+[[collectors.development.pipelines.traces.selectors]]
+field = "type"
+operator = "equals"
+value = "trace"
+priority = 1
+
+[[collectors.development.pipelines.traces.selectors]]
+field = "environment"
+operator = "equals"
+value = "development"
+priority = 2
+
+[collectors.development.pipelines.traces.environment]
+sampling_rate = 1.0
+batch_size = 10
+debug = true
+
+# Global pipeline selectors for dynamic pipeline matching
+[[pipeline_selectors]]
+# High-priority selectors for critical services
+field = "service.name"
+operator = "matches"
+value = "auth|payment|user"
+priority = 10
+
+[[pipeline_selectors]]
+# Environment-based selectors
+field = "environment"
+operator = "equals"
+value = "production"
+priority = 5
+
+[[pipeline_selectors]]
+field = "environment"
+operator = "equals"
+value = "staging"
+priority = 3
+
+[[pipeline_selectors]]
+field = "environment"
+operator = "equals"
+value = "development"
+priority = 1
+
+[[pipeline_selectors]]
+# Signal type selectors
+field = "type"
+operator = "equals"
+value = "trace"
+priority = 2
+
+[[pipeline_selectors]]
+field = "type"
+operator = "equals"
+value = "metric"
+priority = 2
+
+[[pipeline_selectors]]
+field = "type"
+operator = "equals"
+value = "log"
+priority = 2
+
+# Global settings
+[global]
+# Default environment
+environment = "development"
+
+# Default timeout for operations
+default_timeout = "30s"
+
+# Whether to fail fast on errors
+fail_fast = false
+
+[global.retry]
+max_attempts = 3
+initial_backoff = "1s"
+max_backoff = "30s"
+backoff_multiplier = 2.0

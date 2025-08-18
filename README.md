@@ -79,7 +79,72 @@ waveform --contracts "./contracts/**/*.yaml" --mode processor
 waveform --contracts "./contracts/**/*.yaml" \
   --junit-output results.xml \
   --lcov-output coverage.info
+
+# Use runner configuration for advanced settings
+# Create .waveform.yaml in your project directory
+waveform --contracts "./contracts/**/*.yaml"
 ```
+
+## Runner Configuration
+
+Waveform supports a flexible configuration system that honors the XDG Base Directory Specification and supports both YAML and TOML formats.
+
+### Configuration Files
+
+Waveform looks for configuration files in the following order:
+1. Current directory: `.waveform.yaml`, `waveform.yaml`, `.waveform.toml`, `waveform.toml`
+2. XDG config directory: `~/.config/waveform/config.yaml` or `~/.config/waveform/config.toml`
+3. Legacy home directory: `~/.waveform.yaml`, `~/waveform.yaml`, etc.
+
+### Basic Configuration
+
+Create `.waveform.yaml` in your project:
+
+```yaml
+runner:
+  log_level: info
+  timeout: 30s
+  output:
+    formats: ["summary", "junit", "lcov"]
+    directory: "./waveform-reports"
+    verbose: false
+
+collectors:
+  development:
+    name: "development-collector"
+    config_path: "./collector-config.yaml"
+    pipelines:
+      traces:
+        name: "dev-traces"
+        signals: ["traces"]
+        selectors:
+          - field: "environment"
+            operator: "equals"
+            value: "development"
+            priority: 1
+
+global:
+  environment: development
+```
+
+### Dynamic Pipeline Matching
+
+The runner configuration enables dynamic pipeline matching based on telemetry characteristics:
+
+```yaml
+pipeline_selectors:
+  - field: "service.name"
+    operator: "matches"
+    value: "auth|payment|user"
+    priority: 10
+  
+  - field: "environment"
+    operator: "equals"
+    value: "production"
+    priority: 5
+```
+
+For detailed configuration options, see [Runner Configuration Documentation](docs/runner-configuration.md).
 
 ## Contract Schema
 

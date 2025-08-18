@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/goedelsoup/waveform/internal/config"
 	"github.com/goedelsoup/waveform/internal/contract"
@@ -58,10 +59,16 @@ pipelines transform data correctly.`,
 }
 
 func runTests(cmd *cobra.Command, args []string) error {
-	// Setup logging
+	// Load runner configuration
+	runnerConfigLoader := config.NewRunnerConfigLoader()
+	runnerConfig, err := runnerConfigLoader.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load runner configuration: %w", err)
+	}
+
+	// Setup logging based on runner configuration
 	var logger *zap.Logger
-	var err error
-	if verbose {
+	if verbose || runnerConfig.Runner.Output.Verbose {
 		logger, err = zap.NewDevelopment()
 	} else {
 		logger, err = zap.NewProduction()
@@ -75,7 +82,10 @@ func runTests(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	logger.Info("Starting OpenTelemetry Contract Testing Framework")
+	logger.Info("Starting OpenTelemetry Contract Testing Framework",
+		zap.String("log_level", runnerConfig.Runner.LogLevel),
+		zap.String("log_format", runnerConfig.Runner.LogFormat),
+		zap.String("environment", runnerConfig.Global.Environment))
 
 	// Load contracts
 	logger.Info("Loading contracts", zap.Strings("paths", contractPaths))
@@ -146,25 +156,68 @@ func runTests(cmd *cobra.Command, args []string) error {
 	// Print summary to stdout
 	reportGen.PrintSummary()
 
-	// Generate output files
+	// Generate output files based on runner configuration and command line flags
+	outputDir := runnerConfig.Runner.Output.Directory
+	if outputDir == "" {
+		outputDir = "./waveform-reports"
+	}
+
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		logger.Error("Failed to create output directory", zap.Error(err))
+	}
+
+	// Determine which formats to generate
+	formatsToGenerate := make(map[string]bool)
+
+	// Add formats from runner configuration
+	for _, format := range runnerConfig.Runner.Output.Formats {
+		formatsToGenerate[format] = true
+	}
+
+	// Override with command line flags
 	if junitOutput != "" {
-		logger.Info("Generating JUnit XML report", zap.String("path", junitOutput))
-		if err := reportGen.GenerateJUnitXML(junitOutput); err != nil {
-			logger.Error("Failed to generate JUnit XML report", zap.Error(err))
-		}
+		formatsToGenerate["junit"] = true
 	}
-
 	if lcovOutput != "" {
-		logger.Info("Generating LCOV report", zap.String("path", lcovOutput))
-		if err := reportGen.GenerateLCOV(lcovOutput); err != nil {
-			logger.Error("Failed to generate LCOV report", zap.Error(err))
-		}
+		formatsToGenerate["lcov"] = true
+	}
+	if summaryOutput != "" {
+		formatsToGenerate["summary"] = true
 	}
 
-	if summaryOutput != "" {
-		logger.Info("Generating summary report", zap.String("path", summaryOutput))
-		if err := reportGen.GenerateSummary(summaryOutput); err != nil {
-			logger.Error("Failed to generate summary report", zap.Error(err))
+	// Generate reports
+	for format := range formatsToGenerate {
+		switch format {
+		case "junit":
+			outputPath := junitOutput
+			if outputPath == "" {
+				outputPath = filepath.Join(outputDir, "test-results.xml")
+			}
+			logger.Info("Generating JUnit XML report", zap.String("path", outputPath))
+			if err := reportGen.GenerateJUnitXML(outputPath); err != nil {
+				logger.Error("Failed to generate JUnit XML report", zap.Error(err))
+			}
+
+		case "lcov":
+			outputPath := lcovOutput
+			if outputPath == "" {
+				outputPath = filepath.Join(outputDir, "coverage.info")
+			}
+			logger.Info("Generating LCOV report", zap.String("path", outputPath))
+			if err := reportGen.GenerateLCOV(outputPath); err != nil {
+				logger.Error("Failed to generate LCOV report", zap.Error(err))
+			}
+
+		case "summary":
+			outputPath := summaryOutput
+			if outputPath == "" {
+				outputPath = filepath.Join(outputDir, "summary.txt")
+			}
+			logger.Info("Generating summary report", zap.String("path", outputPath))
+			if err := reportGen.GenerateSummary(outputPath); err != nil {
+				logger.Error("Failed to generate summary report", zap.Error(err))
+			}
 		}
 	}
 
