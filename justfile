@@ -175,7 +175,7 @@ help-detailed:
 validate:
     #!/usr/bin/env bash
     echo "Validating project structure..."
-    
+
     # Check if required directories exist
     for dir in cmd internal pkg examples testdata; do
         if [ ! -d "$dir" ]; then
@@ -183,7 +183,7 @@ validate:
             exit 1
         fi
     done
-    
+
     # Check if required files exist
     for file in go.mod go.sum README.md LICENSE; do
         if [ ! -f "$file" ]; then
@@ -191,14 +191,14 @@ validate:
             exit 1
         fi
     done
-    
+
     echo "✅ Project structure is valid"
 
 # Check for common issues
 check:
     #!/usr/bin/env bash
     echo "Running project checks..."
-    
+
     # Check for TODO comments
     echo "Checking for TODO comments..."
     if grep -r "TODO" . --exclude-dir=.git --exclude=justfile; then
@@ -206,7 +206,7 @@ check:
     else
         echo "✅ No TODO comments found"
     fi
-    
+
     # Check for FIXME comments
     echo "Checking for FIXME comments..."
     if grep -r "FIXME" . --exclude-dir=.git --exclude=justfile; then
@@ -214,7 +214,7 @@ check:
     else
         echo "✅ No FIXME comments found"
     fi
-    
+
     # Check for debug prints
     echo "Checking for debug prints..."
     if grep -r "fmt.Print" . --exclude-dir=.git --exclude=justfile; then
@@ -227,7 +227,7 @@ check:
 install-tools:
     #!/usr/bin/env bash
     echo "Installing development tools..."
-    
+
     # Install golangci-lint if not present
     if ! command -v golangci-lint &> /dev/null; then
         echo "Installing golangci-lint..."
@@ -235,7 +235,7 @@ install-tools:
     else
         echo "golangci-lint already installed"
     fi
-    
+
     # Install godoc if not present
     if ! command -v godoc &> /dev/null; then
         echo "Installing godoc..."
@@ -243,27 +243,51 @@ install-tools:
     else
         echo "godoc already installed"
     fi
-    
+
     echo "✅ Development tools installed"
+
+# Setup pre-commit
+setup-pre-commit:
+    #!/usr/bin/env bash
+    echo "Setting up pre-commit..."
+    ./scripts/setup-pre-commit.sh
+
+# Run pre-commit on all files
+pre-commit-all:
+    #!/usr/bin/env bash
+    echo "Running pre-commit on all files..."
+    pre-commit run --all-files
+
+# Run pre-commit on staged files
+pre-commit:
+    #!/usr/bin/env bash
+    echo "Running pre-commit on staged files..."
+    pre-commit run
+
+# Clean pre-commit cache
+pre-commit-clean:
+    #!/usr/bin/env bash
+    echo "Cleaning pre-commit cache..."
+    pre-commit clean
 
 # Show project statistics
 stats:
     #!/usr/bin/env bash
     echo "Project Statistics:"
     echo "=================="
-    
+
     # Count lines of code
     echo "Lines of Go code:"
     find . -name "*.go" -not -path "./vendor/*" -not -path "./.git/*" | xargs wc -l | tail -1
-    
+
     # Count test files
     echo "Test files:"
     find . -name "*_test.go" -not -path "./vendor/*" -not -path "./.git/*" | wc -l
-    
+
     # Count YAML files
     echo "YAML files:"
     find . -name "*.yaml" -o -name "*.yml" | wc -l
-    
+
     # Count total files
     echo "Total files:"
     find . -type f -not -path "./vendor/*" -not -path "./.git/*" | wc -l

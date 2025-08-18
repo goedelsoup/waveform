@@ -61,7 +61,7 @@ runs:
         else
           echo "golangci-lint already installed"
         fi
-        
+
         # Install godoc
         if ! command -v godoc &> /dev/null; then
           echo "Installing godoc..."

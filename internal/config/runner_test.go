@@ -132,7 +132,7 @@ global:
 
 	// Verify collectors
 	assert.Len(t, config.Collectors, 2)
-	
+
 	prodCollector, exists := config.Collectors["production"]
 	assert.True(t, exists)
 	assert.Equal(t, "production-collector", prodCollector.Name)
@@ -274,7 +274,7 @@ backoff_multiplier = 1.5
 
 	// Verify collectors
 	assert.Len(t, config.Collectors, 2)
-	
+
 	prodCollector, exists := config.Collectors["production"]
 	assert.True(t, exists)
 	assert.Equal(t, "production-collector", prodCollector.Name)
@@ -379,7 +379,7 @@ collectors:
 	// Change to the temp directory to load the config
 	originalCwd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(originalCwd)
+	defer os.Chdir(originalCwd) //nolint:all
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
@@ -434,7 +434,7 @@ collectors:
 	// Change to the temp directory to load the config
 	originalCwd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(originalCwd)
+	defer os.Chdir(originalCwd) //nolint:all
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)

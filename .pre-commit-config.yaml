@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+repos:
+  # Go-specific hooks
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+      - id: golangci-lint
+        args: [--timeout=5m]
+      - id: go-unit-tests
+      - id: go-mod-tidy
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-json
+      - id: debug-statements
+
+  # Spell checking (using cspell since you already have cspell.config.yaml)
+  - repo: https://github.com/streetsidesoftware/cspell-cli
+    rev: v8.6.0
+    hooks:
+      - id: cspell
+        args: [--config, cspell.config.yaml]
+
+  # License header check
+  - repo: local
+    hooks:
+      - id: check-license-headers
+        name: Check License Headers
+        entry: bash -c 'for file in "$@"; do if [[ "$file" == *.go ]] && ! head -n 2 "$file" | grep -q "SPDX-License-Identifier"; then echo "Missing license header in $file"; exit 1; fi; done'
+        language: system
+        types: [go]
+        pass_filenames: false

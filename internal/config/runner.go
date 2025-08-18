@@ -31,12 +31,12 @@ type RunnerConfig struct {
 // RunnerSettings contains runner-specific configuration
 type RunnerSettings struct {
 	// Logging configuration
-	LogLevel string `yaml:"log_level" toml:"log_level" default:"info"`
+	LogLevel  string `yaml:"log_level" toml:"log_level" default:"info"`
 	LogFormat string `yaml:"log_format" toml:"log_format" default:"json"`
 
 	// Test execution settings
-	Timeout Duration `yaml:"timeout" toml:"timeout" default:"30s"`
-	Parallel int `yaml:"parallel" toml:"parallel" default:"1"`
+	Timeout  Duration `yaml:"timeout" toml:"timeout" default:"30s"`
+	Parallel int      `yaml:"parallel" toml:"parallel" default:"1"`
 
 	// Output settings
 	Output OutputSettings `yaml:"output" toml:"output"`
@@ -283,22 +283,22 @@ func (l *RunnerConfigLoader) getDefaultConfig() *RunnerConfig {
 				Verbose:   false,
 			},
 			Cache: CacheSettings{
-				Enabled:  true,
+				Enabled:   true,
 				Directory: "~/.cache/waveform",
-				TTL:      "1h",
-				MaxSize:  100,
+				TTL:       "1h",
+				MaxSize:   100,
 			},
 		},
-		Collectors: make(map[string]CollectorDefinition),
+		Collectors:        make(map[string]CollectorDefinition),
 		PipelineSelectors: []PipelineSelector{},
 		Global: GlobalSettings{
 			Environment:    "development",
 			DefaultTimeout: "30s",
 			FailFast:       false,
 			Retry: RetrySettings{
-				MaxAttempts:      3,
-				InitialBackoff:   "1s",
-				MaxBackoff:       "30s",
+				MaxAttempts:       3,
+				InitialBackoff:    "1s",
+				MaxBackoff:        "30s",
 				BackoffMultiplier: 2.0,
 			},
 		},
@@ -327,7 +327,7 @@ func (l *RunnerConfigLoader) SaveConfig(config *RunnerConfig, path string) error
 		if err != nil {
 			return fmt.Errorf("failed to create TOML file: %w", err)
 		}
-		defer file.Close()
+		defer file.Close() //nolint:all
 		return toml.NewEncoder(file).Encode(config)
 	default:
 		return fmt.Errorf("unsupported configuration file format: %s", ext)
@@ -357,7 +357,7 @@ func (l *RunnerConfigLoader) GetPipelineSelectors(pipelineName string) []Pipelin
 	}
 
 	var selectors []PipelineSelector
-	
+
 	// Check global pipeline selectors
 	for _, selector := range config.PipelineSelectors {
 		if selector.Field == "pipeline.name" && selector.Operator == "equals" && selector.Value == pipelineName {

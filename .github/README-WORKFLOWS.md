@@ -225,14 +225,14 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
-      
+
       - name: Run security scan
         run: just security-scan
-      
+
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:

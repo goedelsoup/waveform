@@ -36,18 +36,18 @@ runner:
   # Logging configuration
   log_level: info                    # debug, info, warn, error
   log_format: json                   # json, console
-  
+
   # Test execution settings
   timeout: 30s                       # Default timeout for test execution
   parallel: 1                        # Number of parallel test executions
-  
+
   # Output settings
   output:
     formats: ["summary", "junit", "lcov"]  # Report formats to generate
     directory: "./waveform-reports"        # Output directory for reports
     overwrite: false                       # Whether to overwrite existing files
     verbose: false                         # Verbose output
-  
+
   # Cache settings
   cache:
     enabled: true                    # Whether to enable caching
@@ -62,13 +62,13 @@ collectors:
     description: "Production environment collector"
     config_path: "/etc/collector/production.yaml"
     tags: ["production", "main", "telemetry"]
-    
+
     # Environment-specific settings
     environment:
       datacenter: "us-west-1"
       tier: "production"
       retention_days: 30
-    
+
     # Pipeline configurations
     pipelines:
       traces:
@@ -91,7 +91,7 @@ pipeline_selectors:
     operator: "matches"
     value: "auth|payment|user"
     priority: 10
-  
+
   - field: "environment"
     operator: "equals"
     value: "production"
@@ -316,13 +316,13 @@ pipeline_selectors:
     operator: "matches"
     value: "auth|payment|user"
     priority: 10
-  
+
   # Environment-based selectors
   - field: "environment"
     operator: "equals"
     value: "production"
     priority: 5
-  
+
   # Signal type selectors
   - field: "type"
     operator: "equals"

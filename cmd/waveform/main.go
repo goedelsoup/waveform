@@ -30,9 +30,9 @@ func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "waveform",
 		Short: "OpenTelemetry Contract Testing Framework",
-		Long: `A standalone Go testing framework that applies contract testing principles 
-to OpenTelemetry pipelines. The framework allows telemetry publishers to define 
-YAML contracts specifying their expectations, then validates that collector 
+		Long: `A standalone Go testing framework that applies contract testing principles
+to OpenTelemetry pipelines. The framework allows telemetry publishers to define
+YAML contracts specifying their expectations, then validates that collector
 pipelines transform data correctly.`,
 		RunE: runTests,
 	}

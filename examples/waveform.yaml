@@ -9,18 +9,18 @@ runner:
   # Logging configuration
   log_level: info                    # debug, info, warn, error
   log_format: json                   # json, console
-  
+
   # Test execution settings
   timeout: 30s                       # Default timeout for test execution
   parallel: 1                        # Number of parallel test executions
-  
+
   # Output settings
   output:
     formats: ["summary", "junit", "lcov"]  # Report formats to generate
     directory: "./waveform-reports"        # Output directory for reports
     overwrite: false                       # Whether to overwrite existing files
     verbose: false                         # Verbose output
-  
+
   # Cache settings
   cache:
     enabled: true                    # Whether to enable caching
@@ -36,13 +36,13 @@ collectors:
     description: "Production environment collector with full telemetry pipeline"
     config_path: "/etc/collector/production.yaml"
     tags: ["production", "main", "telemetry"]
-    
+
     # Environment-specific settings
     environment:
       datacenter: "us-west-1"
       tier: "production"
       retention_days: 30
-    
+
     # Pipeline configurations
     pipelines:
       traces:
@@ -65,7 +65,7 @@ collectors:
         environment:
           sampling_rate: 0.1
           batch_size: 1000
-      
+
       metrics:
         name: "metrics-pipeline"
         description: "Metrics processing pipeline for production"
@@ -82,7 +82,7 @@ collectors:
         environment:
           aggregation_interval: "1m"
           retention_days: 90
-      
+
       logs:
         name: "logs-pipeline"
         description: "Log processing pipeline for production"
@@ -106,12 +106,12 @@ collectors:
     description: "Staging environment collector for testing"
     config_path: "/etc/collector/staging.yaml"
     tags: ["staging", "test", "development"]
-    
+
     environment:
       datacenter: "us-west-1"
       tier: "staging"
       retention_days: 7
-    
+
     pipelines:
       traces:
         name: "staging-traces"
@@ -129,7 +129,7 @@ collectors:
         environment:
           sampling_rate: 1.0  # Full sampling in staging
           batch_size: 100
-    
+
       metrics:
         name: "staging-metrics"
         description: "Metrics processing pipeline for staging"
@@ -153,12 +153,12 @@ collectors:
     description: "Development environment collector for local testing"
     config_path: "./collector-config.yaml"
     tags: ["development", "local", "debug"]
-    
+
     environment:
       datacenter: "local"
       tier: "development"
       retention_days: 1
-    
+
     pipelines:
       traces:
         name: "dev-traces"
@@ -185,34 +185,34 @@ pipeline_selectors:
     operator: "matches"
     value: "auth|payment|user"
     priority: 10
-  
+
   # Environment-based selectors
   - field: "environment"
     operator: "equals"
     value: "production"
     priority: 5
-  
+
   - field: "environment"
     operator: "equals"
     value: "staging"
     priority: 3
-  
+
   - field: "environment"
     operator: "equals"
     value: "development"
     priority: 1
-  
+
   # Signal type selectors
   - field: "type"
     operator: "equals"
     value: "trace"
     priority: 2
-  
+
   - field: "type"
     operator: "equals"
     value: "metric"
     priority: 2
-  
+
   - field: "type"
     operator: "equals"
     value: "log"
@@ -222,13 +222,13 @@ pipeline_selectors:
 global:
   # Default environment
   environment: development
-  
+
   # Default timeout for operations
   default_timeout: 30s
-  
+
   # Whether to fail fast on errors
   fail_fast: false
-  
+
   # Retry settings
   retry:
     max_attempts: 3

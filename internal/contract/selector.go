@@ -57,12 +57,6 @@ func (s *PipelineSelectorService) FindMatchingPipelines(selectors *PipelineSelec
 		}
 	}
 
-	// Sort by priority if specified
-	if selectors.Priority > 0 {
-		// In a real implementation, you might want to sort by priority
-		// For now, we'll just return the matches in the order found
-	}
-
 	return matchingPipelines, nil
 }
 

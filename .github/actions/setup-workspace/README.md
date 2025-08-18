@@ -61,10 +61,10 @@ jobs:
     steps:
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
-      
+
       - name: Run tests
         run: just test
-      
+
       - name: Run linting
         run: just lint
 ```
@@ -86,7 +86,7 @@ jobs:
         uses: ./.github/actions/setup-workspace
         with:
           install-tools: 'false'  # Skip tools for faster builds
-      
+
       - name: Build for all platforms
         run: just build-all
 ```
@@ -104,7 +104,7 @@ jobs:
     steps:
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
-      
+
       - name: Run development workflow
         run: just dev
 ```

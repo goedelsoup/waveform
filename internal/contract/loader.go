@@ -6,6 +6,7 @@ package contract
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -171,7 +172,7 @@ func (l *Loader) validatePipelineConfig(contract *Contract) error {
 	// If both are specified, pipeline_selectors takes precedence
 	if contract.Pipeline != "" && contract.PipelineSelectors != nil && len(contract.PipelineSelectors.Selectors) > 0 {
 		// This is allowed but we'll log a warning
-		// In a real implementation, you might want to add a warning system
+		log.Printf("both selector and id were provided - selector being used")
 	}
 
 	// Validate pipeline selectors if present

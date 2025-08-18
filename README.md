@@ -137,7 +137,7 @@ pipeline_selectors:
     operator: "matches"
     value: "auth|payment|user"
     priority: 10
-  
+
   - field: "environment"
     operator: "equals"
     value: "production"

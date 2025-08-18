@@ -1,13 +1,54 @@
 version: "0.2"
-ignorePaths: []
+ignorePaths:
+  - go.sum
 dictionaryDefinitions: []
 dictionaries: []
 words:
   - buildx
+  - chardata
+  - coverprofile
+  - dockerhub
+  - dylib
+  - ehthumbs
+  - errcheck
+  - errorf
+  - fatalf
+  - goarch
+  - gocache
+  - godoc
+  - goedelsoup
+  - gofmt
+  - golangci
+  - gomod
+  - gopath
   - goreleaser
+  - goroot
+  - gosec
+  - govet
+  - incpatch
+  - ineffassign
+  - installsuffix
+  - justfile
+  - ldflags
+  - loglevel
+  - myapp
+  - myorg
+  - nolint
   - pcommon
   - pdata
+  - pids
   - plog
   - pmetric
+  - pycache
+  - staticcheck
+  - stretchr
+  - testdata
+  - tfstate
+  - tlsv
+  - tzdata
+  - unittests
+  - venv
+  - zipkin
+  - zoneinfo
 ignoreWords: []
 import: []
