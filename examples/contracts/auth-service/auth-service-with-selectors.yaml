@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Example HTTP Trace Contract with Pipeline Selectors
+# This contract defines expectations for HTTP trace data from an auth service
+# and uses pipeline selectors to match with appropriate pipelines
+
+publisher: "auth-service"
+version: "1.0.0"
+description: "HTTP trace contract for auth service using pipeline selectors"
+
+# Pipeline selectors instead of explicit pipeline ID
+pipeline_selectors:
+  selectors:
+    - field: "type"
+      operator: "equals"
+      value: "trace"
+    - field: "tags.environment"
+      operator: "equals"
+      value: "production"
+    - field: "name"
+      operator: "contains"
+      value: "auth"
+  priority: 1
+
+inputs:
+  traces:
+    - span_name: "HTTP GET /auth/validate"
+      service_name: "auth-service"
+      attributes:
+        http.method: "GET"
+        http.route: "/auth/validate"
+        http.status_code: 200
+
+filters:
+  - field: "span.service.name"
+    operator: "equals"
+    value: "auth-service"
+
+matchers:
+  traces:
+    - span_name: "HTTP GET /auth/validate"
+      attributes:
+        http.method: "GET"
+        http.route: "/auth/validate"
+        http.status_code: 200

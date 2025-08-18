@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Example Metrics Contract with Pipeline Selectors
+# This contract defines expectations for metric data processing
+# and uses pipeline selectors to match with appropriate pipelines
+
+publisher: "user-service"
+version: "1.0.0"
+description: "Metrics contract for user service using pipeline selectors"
+
+# Pipeline selectors using regex patterns and metadata
+pipeline_selectors:
+  selectors:
+    - field: "type"
+      operator: "equals"
+      value: "metric"
+    - field: "name"
+      operator: "matches"
+      value: ".*user.*"
+    - field: "metadata.processing_type"
+      operator: "equals"
+      value: "aggregation"
+    - field: "tags.datacenter"
+      operator: "starts_with"
+      value: "us-"
+  priority: 2
+
+inputs:
+  metrics:
+    - name: "user.login.attempts"
+      value: 1
+      type: "counter"
+      labels:
+        service: "user-service"
+        endpoint: "/login"
+
+filters:
+  - field: "metric.name"
+    operator: "contains"
+    value: "user"
+
+matchers:
+  metrics:
+    - name: "user.login.attempts"
+      type: "counter"
+      labels:
+        service: "user-service"
+        endpoint: "/login"

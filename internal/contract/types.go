@@ -34,6 +34,30 @@ const (
 	FilterOperatorLessThan    FilterOperator = "less_than"
 )
 
+// PipelineSelectorOperator represents the type of pipeline selector operation
+type PipelineSelectorOperator string
+
+const (
+	PipelineSelectorOperatorEquals     PipelineSelectorOperator = "equals"
+	PipelineSelectorOperatorMatches    PipelineSelectorOperator = "matches"
+	PipelineSelectorOperatorContains   PipelineSelectorOperator = "contains"
+	PipelineSelectorOperatorStartsWith PipelineSelectorOperator = "starts_with"
+	PipelineSelectorOperatorEndsWith   PipelineSelectorOperator = "ends_with"
+)
+
+// PipelineSelector represents a criterion for matching pipelines
+type PipelineSelector struct {
+	Field    string                   `yaml:"field"`
+	Operator PipelineSelectorOperator `yaml:"operator"`
+	Value    interface{}              `yaml:"value"`
+}
+
+// PipelineSelectors represents a set of criteria for matching pipelines
+type PipelineSelectors struct {
+	Selectors []PipelineSelector `yaml:"selectors,omitempty"`
+	Priority  int                `yaml:"priority,omitempty"` // Higher priority selectors are preferred
+}
+
 // Filter represents a filter predicate for determining when to apply a contract
 type Filter struct {
 	Field    string         `yaml:"field"`
@@ -109,15 +133,16 @@ type Matchers struct {
 
 // Contract represents a complete contract definition
 type Contract struct {
-	Publisher   string       `yaml:"publisher"`
-	Pipeline    string       `yaml:"pipeline"`
-	Version     string       `yaml:"version"`
-	Description string       `yaml:"description,omitempty"`
-	Inputs      Inputs       `yaml:"inputs"`
-	Filters     []Filter     `yaml:"filters,omitempty"`
-	Matchers    Matchers     `yaml:"matchers"`
-	TimeWindows []TimeWindow `yaml:"time_windows,omitempty"`
-	FilePath    string       `yaml:"-"` // Set by loader
+	Publisher         string             `yaml:"publisher"`
+	Pipeline          string             `yaml:"pipeline,omitempty"`           // Explicit pipeline ID (deprecated in favor of selectors)
+	PipelineSelectors *PipelineSelectors `yaml:"pipeline_selectors,omitempty"` // Pipeline matching criteria
+	Version           string             `yaml:"version"`
+	Description       string             `yaml:"description,omitempty"`
+	Inputs            Inputs             `yaml:"inputs"`
+	Filters           []Filter           `yaml:"filters,omitempty"`
+	Matchers          Matchers           `yaml:"matchers"`
+	TimeWindows       []TimeWindow       `yaml:"time_windows,omitempty"`
+	FilePath          string             `yaml:"-"` // Set by loader
 }
 
 // OpenTelemetryData represents the unified data structure for all signal types
@@ -166,8 +191,19 @@ func (c *Contract) GetPublisher() string {
 	return c.Publisher
 }
 
+// GetPipeline returns the explicit pipeline ID or empty string if using selectors
 func (c *Contract) GetPipeline() string {
 	return c.Pipeline
+}
+
+// GetPipelineSelectors returns the pipeline selectors if defined
+func (c *Contract) GetPipelineSelectors() *PipelineSelectors {
+	return c.PipelineSelectors
+}
+
+// HasPipelineSelectors returns true if the contract uses pipeline selectors
+func (c *Contract) HasPipelineSelectors() bool {
+	return c.PipelineSelectors != nil && len(c.PipelineSelectors.Selectors) > 0
 }
 
 func (c *Contract) GetVersion() string {

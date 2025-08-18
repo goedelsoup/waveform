@@ -125,11 +125,13 @@ func (l *Loader) validateContract(contract *Contract) error {
 	if contract.Publisher == "" {
 		errors = append(errors, "publisher is required")
 	}
-	if contract.Pipeline == "" {
-		errors = append(errors, "pipeline is required")
-	}
 	if contract.Version == "" {
 		errors = append(errors, "version is required")
+	}
+
+	// Validate pipeline configuration
+	if err := l.validatePipelineConfig(contract); err != nil {
+		errors = append(errors, fmt.Sprintf("pipeline configuration validation failed: %v", err))
 	}
 
 	// Validate inputs
@@ -154,6 +156,64 @@ func (l *Loader) validateContract(contract *Contract) error {
 
 	if len(errors) > 0 {
 		return fmt.Errorf("contract validation errors: %s", strings.Join(errors, "; "))
+	}
+
+	return nil
+}
+
+// validatePipelineConfig validates the pipeline configuration
+func (l *Loader) validatePipelineConfig(contract *Contract) error {
+	// Either pipeline or pipeline_selectors must be specified
+	if contract.Pipeline == "" && (contract.PipelineSelectors == nil || len(contract.PipelineSelectors.Selectors) == 0) {
+		return fmt.Errorf("either pipeline or pipeline_selectors must be specified")
+	}
+
+	// If both are specified, pipeline_selectors takes precedence
+	if contract.Pipeline != "" && contract.PipelineSelectors != nil && len(contract.PipelineSelectors.Selectors) > 0 {
+		// This is allowed but we'll log a warning
+		// In a real implementation, you might want to add a warning system
+	}
+
+	// Validate pipeline selectors if present
+	if contract.PipelineSelectors != nil {
+		if err := l.validatePipelineSelectors(contract.PipelineSelectors); err != nil {
+			return fmt.Errorf("pipeline selectors validation failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validatePipelineSelectors validates the pipeline selectors
+func (l *Loader) validatePipelineSelectors(selectors *PipelineSelectors) error {
+	if len(selectors.Selectors) == 0 {
+		return fmt.Errorf("at least one selector must be specified")
+	}
+
+	for i, selector := range selectors.Selectors {
+		if err := l.validatePipelineSelector(selector, i); err != nil {
+			return fmt.Errorf("selector %d validation failed: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+// validatePipelineSelector validates a single pipeline selector
+func (l *Loader) validatePipelineSelector(selector PipelineSelector, index int) error {
+	if selector.Field == "" {
+		return fmt.Errorf("field is required")
+	}
+
+	switch selector.Operator {
+	case PipelineSelectorOperatorEquals, PipelineSelectorOperatorMatches,
+		PipelineSelectorOperatorContains, PipelineSelectorOperatorStartsWith,
+		PipelineSelectorOperatorEndsWith:
+		if selector.Value == nil {
+			return fmt.Errorf("value is required for operator %s", selector.Operator)
+		}
+	default:
+		return fmt.Errorf("invalid operator %s", selector.Operator)
 	}
 
 	return nil
