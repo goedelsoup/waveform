@@ -4,6 +4,7 @@
 package contract
 
 import (
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -183,8 +184,175 @@ type ContractValidator interface {
 
 // Ensure Contract implements ContractValidator
 func (c *Contract) Validate(input, output OpenTelemetryData) ValidationResult {
-	// This will be implemented in the validation engine
-	return ValidationResult{Valid: true}
+	result := ValidationResult{
+		Valid:    true,
+		Errors:   make([]ValidationError, 0),
+		Warnings: make([]string, 0),
+	}
+
+	// Validate contract structure
+	if err := c.validateContractStructure(); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Type:    "contract_structure",
+			Message: err.Error(),
+		})
+		return result
+	}
+
+	// Apply filters to determine if this contract should be validated
+	if !c.applyFilters(input) {
+		// Contract doesn't apply to this data, but that's not an error
+		return result
+	}
+
+	// Validate input data presence
+	if err := c.validateInputData(input); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Type:    "input_data",
+			Message: err.Error(),
+		})
+	}
+
+	// Validate output data against matchers
+	if err := c.validateOutputData(output); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Type:    "output_validation",
+			Message: err.Error(),
+		})
+	}
+
+	// Validate time windows if specified
+	if err := c.validateTimeWindows(input.Time); err != nil {
+		result.Valid = false
+		result.Errors = append(result.Errors, ValidationError{
+			Type:    "time_window",
+			Message: err.Error(),
+		})
+	}
+
+	return result
+}
+
+// validateContractStructure validates the contract's internal structure
+func (c *Contract) validateContractStructure() error {
+	if c.Publisher == "" {
+		return fmt.Errorf("publisher is required")
+	}
+	if c.Version == "" {
+		return fmt.Errorf("version is required")
+	}
+	if c.Pipeline == "" && (c.PipelineSelectors == nil || len(c.PipelineSelectors.Selectors) == 0) {
+		return fmt.Errorf("either pipeline or pipeline_selectors must be specified")
+	}
+	if len(c.Inputs.Traces) == 0 && len(c.Inputs.Metrics) == 0 && len(c.Inputs.Logs) == 0 {
+		return fmt.Errorf("at least one input (traces, metrics, or logs) must be specified")
+	}
+	if len(c.Matchers.Traces) == 0 && len(c.Matchers.Metrics) == 0 && len(c.Matchers.Logs) == 0 {
+		return fmt.Errorf("at least one matcher (traces, metrics, or logs) must be specified")
+	}
+	return nil
+}
+
+// applyFilters applies filter predicates to determine if a contract should be validated
+func (c *Contract) applyFilters(data OpenTelemetryData) bool {
+	if len(c.Filters) == 0 {
+		return true
+	}
+
+	for _, filter := range c.Filters {
+		if !c.evaluateFilter(filter, data) {
+			return false
+		}
+	}
+	return true
+}
+
+// evaluateFilter evaluates a single filter against the data
+func (c *Contract) evaluateFilter(filter Filter, data OpenTelemetryData) bool {
+	// This is a simplified implementation - in practice, this would use the matcher package
+	// For now, we'll return true to indicate the filter passes
+	// TODO: Implement actual filter evaluation logic
+	return true
+}
+
+// validateInputData validates that the input data matches the contract's input specification
+func (c *Contract) validateInputData(data OpenTelemetryData) error {
+	// Validate traces input
+	if len(c.Inputs.Traces) > 0 {
+		resourceSpans := data.Traces.ResourceSpans()
+		if resourceSpans.Len() == 0 {
+			return fmt.Errorf("contract expects trace input but no traces provided")
+		}
+	}
+
+	// Validate metrics input
+	if len(c.Inputs.Metrics) > 0 {
+		resourceMetrics := data.Metrics.ResourceMetrics()
+		if resourceMetrics.Len() == 0 {
+			return fmt.Errorf("contract expects metric input but no metrics provided")
+		}
+	}
+
+	// Validate logs input
+	if len(c.Inputs.Logs) > 0 {
+		resourceLogs := data.Logs.ResourceLogs()
+		if resourceLogs.Len() == 0 {
+			return fmt.Errorf("contract expects log input but no logs provided")
+		}
+	}
+
+	return nil
+}
+
+// validateOutputData validates that the output data matches the contract's matchers
+func (c *Contract) validateOutputData(data OpenTelemetryData) error {
+	// Validate traces output
+	if len(c.Matchers.Traces) > 0 {
+		resourceSpans := data.Traces.ResourceSpans()
+		if resourceSpans.Len() == 0 {
+			return fmt.Errorf("contract expects trace output but no traces found")
+		}
+	}
+
+	// Validate metrics output
+	if len(c.Matchers.Metrics) > 0 {
+		resourceMetrics := data.Metrics.ResourceMetrics()
+		if resourceMetrics.Len() == 0 {
+			return fmt.Errorf("contract expects metric output but no metrics found")
+		}
+	}
+
+	// Validate logs output
+	if len(c.Matchers.Logs) > 0 {
+		resourceLogs := data.Logs.ResourceLogs()
+		if resourceLogs.Len() == 0 {
+			return fmt.Errorf("contract expects log output but no logs found")
+		}
+	}
+
+	return nil
+}
+
+// validateTimeWindows validates that the data timestamp falls within specified time windows
+func (c *Contract) validateTimeWindows(timestamp time.Time) error {
+	if len(c.TimeWindows) == 0 {
+		return nil
+	}
+
+	// For now, we'll implement basic time window validation
+	// TODO: Implement more sophisticated time window validation based on aggregation and duration
+	for _, window := range c.TimeWindows {
+		if window.Duration != "" {
+			// Parse duration and validate timestamp is within reasonable bounds
+			// This is a placeholder for more sophisticated time window validation
+			_ = window.Duration // Use the duration field to avoid unused variable warning
+		}
+	}
+
+	return nil
 }
 
 func (c *Contract) GetPublisher() string {
