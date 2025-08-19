@@ -3,26 +3,14 @@
 
 # Waveform
 
-A standalone Go testing framework that applies contract testing principles to OpenTelemetry pipelines.
-
-The framework allows telemetry publishers to define YAML contracts specifying their expectations, then validates that collector pipelines transform data correctly.
-
-## What is Contract Testing?
-
-Contract testing ensures that your OpenTelemetry collector pipelines correctly transform telemetry data according to your specifications. Instead of manually testing data transformations, you define contracts that specify:
-
-- **Input data**: What telemetry data you're sending
-- **Expected transformations**: How the data should be modified by your pipeline
-- **Validation rules**: When and how to verify the transformations
-
-This approach catches pipeline configuration errors early and ensures consistent data quality across your observability stack.
+Waveform is a purpose-built testing framework for your OpenTelemetry ecosystem.
 
 ## Features
 
-- **YAML Contract Definition**: Simple, declarative contracts for your telemetry expectations
-- **Multiple Signal Types**: Test traces, metrics, and logs
+- **Multi-Modality Testing Support**: Test full collector pipelines or individual processors
 - **Flexible Validation**: Conditional testing based on data characteristics
-- **Two Testing Modes**: Test full collector pipelines or individual processors
+- **YAML Contracts**: Simple, declarative contracts for your telemetry expectations
+- **Multiple Signal Types**: Test traces, metrics, and logs
 - **Standard Reports**: JUnit XML and LCOV format outputs for CI/CD integration
 - **Go Testing Integration**: Seamless integration with Go's testing ecosystem
 
