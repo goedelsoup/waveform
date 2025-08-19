@@ -33,16 +33,27 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup workspace
-        uses: ./.github/actions/setup-workspace
         with:
-          install-tools: 'true'
+          fetch-depth: 0
 
-      - name: Run linting
-        run: just lint
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          only-new-issues: true
+          args: --timeout=5m
 
       - name: Check formatting
         run: just fmt
