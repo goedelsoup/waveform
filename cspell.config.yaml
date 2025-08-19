@@ -7,8 +7,10 @@ words:
   - buildx
   - chardata
   - coverprofile
+  - cust
   - dockerhub
   - dylib
+  - ecommerce
   - ehthumbs
   - errcheck
   - errorf
@@ -41,7 +43,9 @@ words:
   - pmetric
   - pycache
   - staticcheck
+  - stddev
   - stretchr
+  - testabc
   - testdata
   - tfstate
   - tlsv

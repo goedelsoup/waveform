@@ -26,13 +26,24 @@ const (
 type FilterOperator string
 
 const (
-	FilterOperatorEquals      FilterOperator = "equals"
-	FilterOperatorNotEquals   FilterOperator = "not_equals"
-	FilterOperatorMatches     FilterOperator = "matches"
-	FilterOperatorExists      FilterOperator = "exists"
-	FilterOperatorNotExists   FilterOperator = "not_exists"
-	FilterOperatorGreaterThan FilterOperator = "greater_than"
-	FilterOperatorLessThan    FilterOperator = "less_than"
+	FilterOperatorEquals         FilterOperator = "equals"
+	FilterOperatorNotEquals      FilterOperator = "not_equals"
+	FilterOperatorMatches        FilterOperator = "matches"
+	FilterOperatorNotMatches     FilterOperator = "not_matches"
+	FilterOperatorExists         FilterOperator = "exists"
+	FilterOperatorNotExists      FilterOperator = "not_exists"
+	FilterOperatorGreaterThan    FilterOperator = "greater_than"
+	FilterOperatorLessThan       FilterOperator = "less_than"
+	FilterOperatorGreaterOrEqual FilterOperator = "greater_or_equal"
+	FilterOperatorLessOrEqual    FilterOperator = "less_or_equal"
+	FilterOperatorContains       FilterOperator = "contains"
+	FilterOperatorNotContains    FilterOperator = "not_contains"
+	FilterOperatorStartsWith     FilterOperator = "starts_with"
+	FilterOperatorEndsWith       FilterOperator = "ends_with"
+	FilterOperatorInRange        FilterOperator = "in_range"
+	FilterOperatorNotInRange     FilterOperator = "not_in_range"
+	FilterOperatorOneOf          FilterOperator = "one_of"
+	FilterOperatorNotOneOf       FilterOperator = "not_one_of"
 )
 
 // PipelineSelectorOperator represents the type of pipeline selector operation
@@ -59,7 +70,70 @@ type PipelineSelectors struct {
 	Priority  int                `yaml:"priority,omitempty"` // Higher priority selectors are preferred
 }
 
-// Filter represents a filter predicate for determining when to apply a contract
+// ValidationRule represents a sophisticated validation rule
+type ValidationRule struct {
+	Field       string             `yaml:"field"`
+	Operator    FilterOperator     `yaml:"operator"`
+	Value       interface{}        `yaml:"value,omitempty"`
+	Values      []interface{}      `yaml:"values,omitempty"`      // For one_of, not_one_of operations
+	Range       *ValueRange        `yaml:"range,omitempty"`       // For range operations
+	Pattern     string             `yaml:"pattern,omitempty"`     // For regex patterns
+	Condition   *ConditionalRule   `yaml:"condition,omitempty"`   // For conditional logic
+	Transform   *TransformRule     `yaml:"transform,omitempty"`   // For transformation validation
+	Temporal    *TemporalRule      `yaml:"temporal,omitempty"`    // For time-based validation
+	Description string             `yaml:"description,omitempty"` // Human-readable description
+	Severity    ValidationSeverity `yaml:"severity,omitempty"`    // Error, warning, or info
+}
+
+// ValidationSeverity represents the severity level of a validation rule
+type ValidationSeverity string
+
+const (
+	SeverityError   ValidationSeverity = "error"
+	SeverityWarning ValidationSeverity = "warning"
+	SeverityInfo    ValidationSeverity = "info"
+)
+
+// ValueRange represents a numeric or temporal range
+type ValueRange struct {
+	Min          interface{} `yaml:"min,omitempty"`
+	Max          interface{} `yaml:"max,omitempty"`
+	Inclusive    bool        `yaml:"inclusive,omitempty"`     // Whether endpoints are included
+	MinInclusive *bool       `yaml:"min_inclusive,omitempty"` // Override for min
+	MaxInclusive *bool       `yaml:"max_inclusive,omitempty"` // Override for max
+}
+
+// ConditionalRule represents conditional validation logic
+type ConditionalRule struct {
+	If   *ValidationRule  `yaml:"if"`
+	Then *ValidationRule  `yaml:"then,omitempty"`
+	Else *ValidationRule  `yaml:"else,omitempty"`
+	And  []ValidationRule `yaml:"and,omitempty"` // All conditions must be true
+	Or   []ValidationRule `yaml:"or,omitempty"`  // Any condition must be true
+	Not  *ValidationRule  `yaml:"not,omitempty"` // Condition must be false
+}
+
+// TransformRule represents expected data transformations
+type TransformRule struct {
+	Type       string                 `yaml:"type"`                 // add, remove, modify, rename
+	Source     string                 `yaml:"source,omitempty"`     // Source field
+	Target     string                 `yaml:"target,omitempty"`     // Target field
+	Value      interface{}            `yaml:"value,omitempty"`      // Expected value after transformation
+	Function   string                 `yaml:"function,omitempty"`   // Transformation function name
+	Parameters map[string]interface{} `yaml:"parameters,omitempty"` // Function parameters
+}
+
+// TemporalRule represents time-based validation rules
+type TemporalRule struct {
+	WindowSize  string         `yaml:"window_size"`          // Time window duration
+	Aggregation string         `yaml:"aggregation"`          // sum, avg, count, min, max
+	Threshold   interface{}    `yaml:"threshold,omitempty"`  // Threshold value
+	Comparison  FilterOperator `yaml:"comparison,omitempty"` // Comparison operator
+	Baseline    string         `yaml:"baseline,omitempty"`   // Baseline for comparison
+	Tolerance   float64        `yaml:"tolerance,omitempty"`  // Tolerance percentage
+}
+
+// Filter represents a filter predicate for determining when to apply a contract (legacy)
 type Filter struct {
 	Field    string         `yaml:"field"`
 	Operator FilterOperator `yaml:"operator"`
@@ -98,24 +172,95 @@ type LogInput struct {
 
 // TraceMatcher represents expected trace transformations
 type TraceMatcher struct {
-	SpanName    string                 `yaml:"span_name,omitempty"`
-	Attributes  map[string]interface{} `yaml:"attributes,omitempty"`
-	ParentSpan  string                 `yaml:"parent_span,omitempty"`
-	ServiceName string                 `yaml:"service_name,omitempty"`
+	SpanName         string                   `yaml:"span_name,omitempty"`
+	Attributes       map[string]interface{}   `yaml:"attributes,omitempty"`
+	ParentSpan       string                   `yaml:"parent_span,omitempty"`
+	ServiceName      string                   `yaml:"service_name,omitempty"`
+	ValidationRules  []ValidationRule         `yaml:"validation_rules,omitempty"`  // Advanced validation rules
+	Count            *CountMatcher            `yaml:"count,omitempty"`             // Expected count validation
+	Duration         *DurationMatcher         `yaml:"duration,omitempty"`          // Span duration validation
+	StatusCode       *StatusCodeMatcher       `yaml:"status_code,omitempty"`       // HTTP/gRPC status validation
+	CustomValidation *CustomValidationMatcher `yaml:"custom_validation,omitempty"` // Custom validation logic
 }
 
 // MetricMatcher represents expected metric transformations
 type MetricMatcher struct {
-	Name   string                 `yaml:"name,omitempty"`
-	Type   string                 `yaml:"type,omitempty"`
-	Labels map[string]interface{} `yaml:"labels,omitempty"`
+	Name             string                   `yaml:"name,omitempty"`
+	Type             string                   `yaml:"type,omitempty"`
+	Labels           map[string]interface{}   `yaml:"labels,omitempty"`
+	ValidationRules  []ValidationRule         `yaml:"validation_rules,omitempty"`  // Advanced validation rules
+	Value            *ValueMatcher            `yaml:"value,omitempty"`             // Metric value validation
+	Count            *CountMatcher            `yaml:"count,omitempty"`             // Expected count validation
+	Histogram        *HistogramMatcher        `yaml:"histogram,omitempty"`         // Histogram-specific validation
+	CustomValidation *CustomValidationMatcher `yaml:"custom_validation,omitempty"` // Custom validation logic
 }
 
 // LogMatcher represents expected log transformations
 type LogMatcher struct {
-	Body       string                 `yaml:"body,omitempty"`
-	Severity   string                 `yaml:"severity,omitempty"`
-	Attributes map[string]interface{} `yaml:"attributes,omitempty"`
+	Body             string                   `yaml:"body,omitempty"`
+	Severity         string                   `yaml:"severity,omitempty"`
+	Attributes       map[string]interface{}   `yaml:"attributes,omitempty"`
+	ValidationRules  []ValidationRule         `yaml:"validation_rules,omitempty"`  // Advanced validation rules
+	Count            *CountMatcher            `yaml:"count,omitempty"`             // Expected count validation
+	Timestamp        *TimestampMatcher        `yaml:"timestamp,omitempty"`         // Timestamp validation
+	CustomValidation *CustomValidationMatcher `yaml:"custom_validation,omitempty"` // Custom validation logic
+}
+
+// CountMatcher represents count-based validation
+type CountMatcher struct {
+	Expected int            `yaml:"expected,omitempty"`
+	Min      *int           `yaml:"min,omitempty"`
+	Max      *int           `yaml:"max,omitempty"`
+	Operator FilterOperator `yaml:"operator,omitempty"`
+	Value    int            `yaml:"value,omitempty"`
+}
+
+// ValueMatcher represents metric value validation
+type ValueMatcher struct {
+	Expected  interface{}    `yaml:"expected,omitempty"`
+	Range     *ValueRange    `yaml:"range,omitempty"`
+	Operator  FilterOperator `yaml:"operator,omitempty"`
+	Tolerance float64        `yaml:"tolerance,omitempty"` // Percentage tolerance for comparisons
+}
+
+// DurationMatcher represents span duration validation
+type DurationMatcher struct {
+	Min       string `yaml:"min,omitempty"`       // Duration string like "100ms"
+	Max       string `yaml:"max,omitempty"`       // Duration string like "5s"
+	Expected  string `yaml:"expected,omitempty"`  // Expected duration
+	Tolerance string `yaml:"tolerance,omitempty"` // Tolerance duration
+}
+
+// StatusCodeMatcher represents status code validation
+type StatusCodeMatcher struct {
+	Expected   int         `yaml:"expected,omitempty"`
+	Range      *ValueRange `yaml:"range,omitempty"`
+	Class      string      `yaml:"class,omitempty"` // 2xx, 3xx, 4xx, 5xx
+	NotAllowed []int       `yaml:"not_allowed,omitempty"`
+}
+
+// HistogramMatcher represents histogram-specific validation
+type HistogramMatcher struct {
+	Buckets      []float64       `yaml:"buckets,omitempty"`
+	Count        int             `yaml:"count,omitempty"`
+	Sum          float64         `yaml:"sum,omitempty"`
+	BucketCounts map[float64]int `yaml:"bucket_counts,omitempty"`
+}
+
+// TimestampMatcher represents timestamp validation
+type TimestampMatcher struct {
+	Format    string      `yaml:"format,omitempty"`    // RFC3339, Unix, etc.
+	Range     *ValueRange `yaml:"range,omitempty"`     // Time range
+	Relative  string      `yaml:"relative,omitempty"`  // "within_last_hour", etc.
+	Precision string      `yaml:"precision,omitempty"` // "second", "millisecond", etc.
+}
+
+// CustomValidationMatcher represents custom validation logic
+type CustomValidationMatcher struct {
+	Script     string                 `yaml:"script,omitempty"`   // Script/expression to evaluate
+	Language   string                 `yaml:"language,omitempty"` // "javascript", "go", "cel" etc.
+	Function   string                 `yaml:"function,omitempty"` // Function name to call
+	Parameters map[string]interface{} `yaml:"parameters,omitempty"`
 }
 
 // Inputs represents the input data samples or generation rules
@@ -134,16 +279,48 @@ type Matchers struct {
 
 // Contract represents a complete contract definition
 type Contract struct {
-	Publisher         string             `yaml:"publisher"`
-	Pipeline          string             `yaml:"pipeline,omitempty"`           // Explicit pipeline ID (deprecated in favor of selectors)
-	PipelineSelectors *PipelineSelectors `yaml:"pipeline_selectors,omitempty"` // Pipeline matching criteria
-	Version           string             `yaml:"version"`
-	Description       string             `yaml:"description,omitempty"`
-	Inputs            Inputs             `yaml:"inputs"`
-	Filters           []Filter           `yaml:"filters,omitempty"`
-	Matchers          Matchers           `yaml:"matchers"`
-	TimeWindows       []TimeWindow       `yaml:"time_windows,omitempty"`
-	FilePath          string             `yaml:"-"` // Set by loader
+	Publisher         string               `yaml:"publisher"`
+	Pipeline          string               `yaml:"pipeline,omitempty"`           // Explicit pipeline ID (deprecated in favor of selectors)
+	PipelineSelectors *PipelineSelectors   `yaml:"pipeline_selectors,omitempty"` // Pipeline matching criteria
+	Version           string               `yaml:"version"`
+	Description       string               `yaml:"description,omitempty"`
+	Inputs            Inputs               `yaml:"inputs"`
+	Filters           []Filter             `yaml:"filters,omitempty"`          // Legacy filters (for backward compatibility)
+	ValidationRules   []ValidationRule     `yaml:"validation_rules,omitempty"` // Advanced validation rules
+	Matchers          Matchers             `yaml:"matchers"`
+	TimeWindows       []TimeWindow         `yaml:"time_windows,omitempty"`
+	Schema            *ContractSchema      `yaml:"schema,omitempty"`      // Schema definition for contract validation
+	Inheritance       *ContractInheritance `yaml:"inheritance,omitempty"` // Contract inheritance configuration
+	FilePath          string               `yaml:"-"`                     // Set by loader
+}
+
+// ContractSchema represents schema validation for contracts
+type ContractSchema struct {
+	Version          string                 `yaml:"version"`                     // Schema version
+	RequiredFields   []string               `yaml:"required_fields,omitempty"`   // Required contract fields
+	FieldTypes       map[string]string      `yaml:"field_types,omitempty"`       // Expected field types
+	ValidationRules  []SchemaValidationRule `yaml:"validation_rules,omitempty"`  // Schema-level validation
+	CustomValidators map[string]interface{} `yaml:"custom_validators,omitempty"` // Custom validation functions
+}
+
+// SchemaValidationRule represents schema-level validation rules
+type SchemaValidationRule struct {
+	Field       string   `yaml:"field"`
+	Type        string   `yaml:"type"` // string, number, boolean, array, object
+	Required    bool     `yaml:"required"`
+	MinLength   *int     `yaml:"min_length,omitempty"`
+	MaxLength   *int     `yaml:"max_length,omitempty"`
+	Pattern     string   `yaml:"pattern,omitempty"`
+	Enum        []string `yaml:"enum,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+}
+
+// ContractInheritance represents contract inheritance and composition
+type ContractInheritance struct {
+	Extends   []string               `yaml:"extends,omitempty"`   // Parent contracts to inherit from
+	Includes  []string               `yaml:"includes,omitempty"`  // Contracts to include/compose
+	Overrides map[string]interface{} `yaml:"overrides,omitempty"` // Field overrides for inheritance
+	Mixins    []string               `yaml:"mixins,omitempty"`    // Mixin contracts to apply
 }
 
 // OpenTelemetryData represents the unified data structure for all signal types

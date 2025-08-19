@@ -36,8 +36,12 @@ func (g *Generator) SetBaseTime(baseTime time.Time) {
 
 // GenerateFromContract generates OpenTelemetry data based on a contract
 func (g *Generator) GenerateFromContract(contractDef *contract.Contract) contract.OpenTelemetryData {
-	var data contract.OpenTelemetryData
-	data.Time = g.baseTime
+	data := contract.OpenTelemetryData{
+		Time:    g.baseTime,
+		Traces:  ptrace.NewTraces(),
+		Metrics: pmetric.NewMetrics(),
+		Logs:    plog.NewLogs(),
+	}
 
 	// Generate traces
 	if len(contractDef.Inputs.Traces) > 0 {

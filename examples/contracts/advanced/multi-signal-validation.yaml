@@ -1,0 +1,224 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: © 2025 Cory Parent <goedelsoup+waveform@goedelsoup.io>
+
+# Advanced Contract Example: Multi-Signal Validation
+# This contract demonstrates validation across traces, metrics, and logs
+# with sophisticated cross-signal validation rules.
+
+publisher: "ecommerce-api"
+version: "2.1.0"
+description: "E-commerce API contract with multi-signal validation and temporal rules"
+
+pipeline_selectors:
+  selectors:
+    - field: "environment"
+      operator: "equals"
+      value: "production"
+    - field: "service.name"
+      operator: "starts_with"
+      value: "ecommerce"
+  priority: 5
+
+inputs:
+  traces:
+    - span_name: "order_checkout"
+      service_name: "ecommerce-api"
+      attributes:
+        order.id: "ord_12345"
+        order.total: 299.99
+        customer.id: "cust_67890"
+        http.method: "POST"
+        http.status_code: 201
+
+  metrics:
+    - name: "orders_completed_total"
+      type: "counter"
+      value: 1
+      labels:
+        service: "ecommerce-api"
+        status: "success"
+
+  logs:
+    - body: "Order ord_12345 completed successfully"
+      severity: "INFO"
+      attributes:
+        order.id: "ord_12345"
+        customer.id: "cust_67890"
+        event.type: "order.completed"
+
+# Advanced multi-signal validation rules
+validation_rules:
+  # Cross-signal validation: Order ID must be consistent across all signals
+  - field: "span.attributes.order.id"
+    operator: "equals"
+    value: "ord_12345"
+    description: "Order ID must be consistent in traces"
+    severity: "error"
+
+  # Temporal correlation: Log timestamp should be close to span end time
+  - field: "log.timestamp"
+    operator: "equals"
+    value: "span.end_time"
+    temporal:
+      window_size: "5s"
+      tolerance: 0.1
+    description: "Log timestamp should correlate with span timing"
+    severity: "warning"
+
+  # Metric validation: Counter should increment appropriately
+  - field: "metric.value"
+    operator: "greater_than"
+    value: 0
+    condition:
+      and:
+        - field: "span.attributes.http.status_code"
+          operator: "in_range"
+          range:
+            min: 200
+            max: 299
+            inclusive: true
+        - field: "span.attributes.order.total"
+          operator: "greater_than"
+          value: 0
+    description: "Success metric should increment for valid orders"
+    severity: "error"
+
+  # Complex transformation validation
+  - field: "span.attributes.order.total_cents"
+    operator: "exists"
+    transform:
+      type: "add"
+      source: "span.attributes.order.total"
+      target: "span.attributes.order.total_cents"
+      function: "multiply"
+      parameters:
+        factor: 100
+    description: "Order total should be converted to cents"
+    severity: "warning"
+
+matchers:
+  traces:
+    - span_name: "order_checkout"
+      service_name: "ecommerce-api"
+      attributes:
+        order.id: "ord_12345"
+        order.status: "completed"
+        order.total_cents: 29999  # Converted from 299.99
+        customer.tier: "premium"  # Added by processing pipeline
+
+      validation_rules:
+        # Validate order processing logic
+        - field: "span.attributes.order.status"
+          operator: "one_of"
+          values: ["completed", "pending", "failed"]
+
+        # Validate customer tier assignment
+        - field: "span.attributes.customer.tier"
+          operator: "one_of"
+          values: ["basic", "premium", "enterprise"]
+          condition:
+            if:
+              field: "span.attributes.order.total"
+              operator: "greater_than"
+              value: 200
+            then:
+              field: "span.attributes.customer.tier"
+              operator: "one_of"
+              values: ["premium", "enterprise"]
+
+      count:
+        expected: 1
+
+      duration:
+        min: "100ms"
+        max: "2s"
+        expected: "500ms"
+        tolerance: "200ms"
+
+      status_code:
+        expected: 201
+
+  metrics:
+    - name: "orders_completed_total"
+      type: "counter"
+      labels:
+        service: "ecommerce-api"
+        status: "success"
+        tier: "premium"  # Should be enriched based on order
+
+      validation_rules:
+        # Validate metric enrichment
+        - field: "metric.labels.tier"
+          operator: "exists"
+          description: "Metric should be enriched with customer tier"
+
+        # Validate metric value increment
+        - field: "metric.value"
+          operator: "equals"
+          value: 1
+
+      value:
+        expected: 1
+        operator: "equals"
+
+      count:
+        expected: 1
+
+  logs:
+    - body: "Order ord_12345 completed successfully for premium customer"
+      severity: "INFO"
+      attributes:
+        order.id: "ord_12345"
+        customer.id: "cust_67890"
+        customer.tier: "premium"  # Should be enriched
+        event.type: "order.completed"
+        structured: true  # Should be added by log processor
+
+      validation_rules:
+        # Validate log enrichment
+        - field: "log.attributes.customer.tier"
+          operator: "exists"
+          description: "Log should be enriched with customer tier"
+
+        # Validate structured logging
+        - field: "log.attributes.structured"
+          operator: "equals"
+          value: true
+          description: "Log should be marked as structured"
+
+        # Validate log level consistency
+        - field: "log.severity"
+          operator: "one_of"
+          values: ["INFO", "WARN", "ERROR"]
+          condition:
+            if:
+              field: "span.attributes.order.status"
+              operator: "equals"
+              value: "completed"
+            then:
+              field: "log.severity"
+              operator: "equals"
+              value: "INFO"
+
+      count:
+        expected: 1
+
+      timestamp:
+        format: "RFC3339"
+        relative: "within_last_minute"
+        precision: "millisecond"
+
+# Time window validation for order processing
+time_windows:
+  - aggregation: "count"
+    duration: "1m"
+    expected_behavior: "orders should be processed within reasonable time"
+
+# Contract inheritance example
+inheritance:
+  extends: ["base-ecommerce-contract"]
+  includes: ["common-http-validations", "standard-logging-rules"]
+  overrides:
+    validation_rules:
+      severity: "error"  # Override to make all validations errors
+  mixins: ["temporal-validation-mixin"]
