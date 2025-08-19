@@ -263,7 +263,11 @@ func (l *Loader) validateFilters(filters []Filter) error {
 
 		switch filter.Operator {
 		case FilterOperatorEquals, FilterOperatorNotEquals, FilterOperatorMatches,
-			FilterOperatorGreaterThan, FilterOperatorLessThan:
+			FilterOperatorNotMatches, FilterOperatorGreaterThan, FilterOperatorLessThan,
+			FilterOperatorGreaterOrEqual, FilterOperatorLessOrEqual, FilterOperatorContains,
+			FilterOperatorNotContains, FilterOperatorStartsWith, FilterOperatorEndsWith,
+			FilterOperatorInRange, FilterOperatorNotInRange, FilterOperatorOneOf,
+			FilterOperatorNotOneOf:
 			if filter.Value == nil {
 				return fmt.Errorf("filter %d: value is required for operator %s", i, filter.Operator)
 			}

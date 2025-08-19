@@ -118,6 +118,8 @@ func (m *Matcher) evaluateFilter(filter contract.Filter, data contract.OpenTelem
 		return !m.compareValues(fieldValue, filter.Value, "equals")
 	case contract.FilterOperatorMatches:
 		return m.matchesPattern(fieldValue, filter.Value)
+	case contract.FilterOperatorNotMatches:
+		return !m.matchesPattern(fieldValue, filter.Value)
 	case contract.FilterOperatorExists:
 		return fieldValue != nil
 	case contract.FilterOperatorNotExists:
@@ -126,6 +128,18 @@ func (m *Matcher) evaluateFilter(filter contract.Filter, data contract.OpenTelem
 		return m.compareValues(fieldValue, filter.Value, "greater_than")
 	case contract.FilterOperatorLessThan:
 		return m.compareValues(fieldValue, filter.Value, "less_than")
+	case contract.FilterOperatorGreaterOrEqual:
+		return m.compareValues(fieldValue, filter.Value, "greater_or_equal")
+	case contract.FilterOperatorLessOrEqual:
+		return m.compareValues(fieldValue, filter.Value, "less_or_equal")
+	case contract.FilterOperatorContains:
+		return m.containsValue(fieldValue, filter.Value)
+	case contract.FilterOperatorNotContains:
+		return !m.containsValue(fieldValue, filter.Value)
+	case contract.FilterOperatorStartsWith:
+		return m.startsWithValue(fieldValue, filter.Value)
+	case contract.FilterOperatorEndsWith:
+		return m.endsWithValue(fieldValue, filter.Value)
 	default:
 		return false
 	}
@@ -223,6 +237,10 @@ func (m *Matcher) extractMetricField(parts []string, metrics pmetric.Metrics) in
 		case pmetric.MetricTypeGauge:
 			return "gauge"
 		case pmetric.MetricTypeSum:
+			// Check if it's a counter (monotonic sum) or regular sum
+			if metric.Sum().IsMonotonic() {
+				return "counter"
+			}
 			return "sum"
 		case pmetric.MetricTypeHistogram:
 			return "histogram"
@@ -309,6 +327,10 @@ func (m *Matcher) compareValues(a, b interface{}, operation string) bool {
 				return av > bv
 			case "less_than":
 				return av < bv
+			case "greater_or_equal":
+				return av >= bv
+			case "less_or_equal":
+				return av <= bv
 			}
 		}
 	case int, int64:
@@ -329,6 +351,10 @@ func (m *Matcher) compareValues(a, b interface{}, operation string) bool {
 				return avInt > int64(bv)
 			case "less_than":
 				return avInt < int64(bv)
+			case "greater_or_equal":
+				return avInt >= int64(bv)
+			case "less_or_equal":
+				return avInt <= int64(bv)
 			}
 		case int64:
 			switch operation {
@@ -338,6 +364,10 @@ func (m *Matcher) compareValues(a, b interface{}, operation string) bool {
 				return avInt > bv
 			case "less_than":
 				return avInt < bv
+			case "greater_or_equal":
+				return avInt >= bv
+			case "less_or_equal":
+				return avInt <= bv
 			}
 		}
 	case float64:
@@ -349,6 +379,10 @@ func (m *Matcher) compareValues(a, b interface{}, operation string) bool {
 				return av > bv
 			case "less_than":
 				return av < bv
+			case "greater_or_equal":
+				return av >= bv
+			case "less_or_equal":
+				return av <= bv
 			}
 		}
 	}
@@ -378,6 +412,63 @@ func (m *Matcher) matchesPattern(value interface{}, pattern interface{}) bool {
 	}
 
 	return regex.MatchString(valueStr)
+}
+
+// containsValue checks if a value contains another value
+func (m *Matcher) containsValue(value interface{}, contains interface{}) bool {
+	if value == nil || contains == nil {
+		return false
+	}
+
+	valueStr, ok := value.(string)
+	if !ok {
+		valueStr = fmt.Sprintf("%v", value)
+	}
+
+	containsStr, ok := contains.(string)
+	if !ok {
+		containsStr = fmt.Sprintf("%v", contains)
+	}
+
+	return strings.Contains(valueStr, containsStr)
+}
+
+// startsWithValue checks if a value starts with another value
+func (m *Matcher) startsWithValue(value interface{}, startsWith interface{}) bool {
+	if value == nil || startsWith == nil {
+		return false
+	}
+
+	valueStr, ok := value.(string)
+	if !ok {
+		valueStr = fmt.Sprintf("%v", value)
+	}
+
+	startsWithStr, ok := startsWith.(string)
+	if !ok {
+		startsWithStr = fmt.Sprintf("%v", startsWith)
+	}
+
+	return strings.HasPrefix(valueStr, startsWithStr)
+}
+
+// endsWithValue checks if a value ends with another value
+func (m *Matcher) endsWithValue(value interface{}, endsWith interface{}) bool {
+	if value == nil || endsWith == nil {
+		return false
+	}
+
+	valueStr, ok := value.(string)
+	if !ok {
+		valueStr = fmt.Sprintf("%v", value)
+	}
+
+	endsWithStr, ok := endsWith.(string)
+	if !ok {
+		endsWithStr = fmt.Sprintf("%v", endsWith)
+	}
+
+	return strings.HasSuffix(valueStr, endsWithStr)
 }
 
 // validateTraces validates trace data against matchers
@@ -447,6 +538,18 @@ func (m *Matcher) validateTrace(matcher contract.TraceMatcher, traces ptrace.Tra
 				}
 
 				expectedStr := fmt.Sprintf("%v", expectedValue)
+				// Handle float precision issues by comparing as numbers when possible
+				if actualValue.Type() == pcommon.ValueTypeDouble && expectedValue != nil {
+					if expectedFloat, ok := expectedValue.(float64); ok {
+						if actualValue.Double() == expectedFloat {
+							continue // Values match as floats
+						}
+					} else if expectedInt, ok := expectedValue.(int); ok {
+						if actualValue.Double() == float64(expectedInt) {
+							continue // Values match as int to float
+						}
+					}
+				}
 				if actualStr != expectedStr {
 					return fmt.Errorf("attribute %s mismatch: expected %v, got %s", key, expectedValue, actualStr)
 				}
@@ -492,7 +595,12 @@ func (m *Matcher) validateMetric(matcher contract.MetricMatcher, metrics pmetric
 		case pmetric.MetricTypeGauge:
 			actualType = "gauge"
 		case pmetric.MetricTypeSum:
-			actualType = "sum"
+			// Check if it's a counter (monotonic sum) or regular sum
+			if metric.Sum().IsMonotonic() {
+				actualType = "counter"
+			} else {
+				actualType = "sum"
+			}
 		case pmetric.MetricTypeHistogram:
 			actualType = "histogram"
 		}
@@ -513,6 +621,10 @@ func (m *Matcher) validateMetric(matcher contract.MetricMatcher, metrics pmetric
 		case pmetric.MetricTypeSum:
 			if metric.Sum().DataPoints().Len() > 0 {
 				actualValue, found = metric.Sum().DataPoints().At(0).Attributes().Get(key)
+			}
+		case pmetric.MetricTypeHistogram:
+			if metric.Histogram().DataPoints().Len() > 0 {
+				actualValue, found = metric.Histogram().DataPoints().At(0).Attributes().Get(key)
 			}
 		}
 
